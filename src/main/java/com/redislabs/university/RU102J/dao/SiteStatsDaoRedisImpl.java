@@ -86,13 +86,12 @@ public class SiteStatsDaoRedisImpl implements SiteStatsDao {
         pipelined.expire(key, weekSeconds);
         pipelined.sync();
 
-        Transaction transaction = jedis.multi();
-        compareAndUpdateScript.updateIfGreater(transaction, key, SiteStats.maxWhField, reading.getWhGenerated());
-        compareAndUpdateScript.updateIfLess(transaction, key, SiteStats.minWhField, reading.getWhGenerated());
-        compareAndUpdateScript.updateIfGreater(transaction, key, SiteStats.maxCapacityField, getCurrentCapacity(reading));
-
-        transaction.exec();
-        // END Challenge #3
+        try(Transaction transaction = jedis.multi()){
+            compareAndUpdateScript.updateIfGreater(transaction, key, SiteStats.maxWhField, reading.getWhGenerated());
+            compareAndUpdateScript.updateIfLess(transaction, key, SiteStats.minWhField, reading.getWhGenerated());
+            compareAndUpdateScript.updateIfGreater(transaction, key, SiteStats.maxCapacityField, getCurrentCapacity(reading));
+            transaction.exec();
+        }// END Challenge #3
     }
 
     private Double getCurrentCapacity(MeterReading reading) {
